@@ -4,16 +4,16 @@ export interface Product {
   description: string;
   category: string;
   price: number;
+  stock: number;
   variants: ProductVariant[];
   images: string[];
-  status: 'active' | 'inactive' | 'draft';
-  created_at: string;
-  updated_at: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ProductVariant {
   id: string;
-  product_id: string;
+  productId: string;
   name: string;
   sku: string;
   price: number;
@@ -23,62 +23,44 @@ export interface ProductVariant {
 
 export interface Order {
   id: string;
-  customer_id: string;
-  total: number;
+  customerId: string;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   items: OrderItem[];
-  shipping_address: Address;
-  created_at: string;
-  updated_at: string;
+  total: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface OrderItem {
   id: string;
-  product_id: string;
-  variant_id?: string;
+  productId: string;
+  variantId?: string;
   quantity: number;
   price: number;
-  product_name: string;
 }
 
 export interface Customer {
   id: string;
   name: string;
   email: string;
-  phone?: string;
-  total_orders: number;
-  total_spent: number;
-  last_order_date?: string;
-  status: 'active' | 'inactive';
-  created_at: string;
-}
-
-export interface Address {
-  street: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  country: string;
+  phone: string;
+  address: string;
+  totalOrders: number;
+  totalSpent: number;
+  createdAt: Date;
 }
 
 export interface InventoryMovement {
   id: string;
-  product_id: string;
-  variant_id?: string;
+  productId: string;
+  variantId?: string;
   type: 'in' | 'out' | 'adjustment';
   quantity: number;
   reason: string;
-  created_at: string;
+  createdAt: Date;
 }
 
-export interface SalesData {
-  date: string;
-  sales: number;
-  orders: number;
-  revenue: number;
-}
-
-export interface DashboardStats {
+export interface DashboardMetrics {
   totalRevenue: number;
   totalOrders: number;
   totalProducts: number;

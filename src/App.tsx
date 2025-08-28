@@ -1,81 +1,109 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider } from './hooks/useAuth';
-import { Sidebar } from './components/Layout/Sidebar';
-import { Header } from './components/Layout/Header';
-import { Dashboard } from './components/Dashboard/Dashboard';
-import { ProductsManagement } from './components/Products/ProductsManagement';
-import { OrdersManagement } from './components/Orders/OrdersManagement';
-import { CustomersManagement } from './components/Customers/CustomersManagement';
-import { Analytics } from './components/Analytics/Analytics';
-import { Settings } from './components/Settings/Settings';
+import Sidebar from './components/Layout/Sidebar';
+import Header from './components/Layout/Header';
+import Dashboard from './sections/Dashboard';
+import Products from './sections/Products';
+import Orders from './sections/Orders';
+import Customers from './sections/Customers';
+import Analytics from './sections/Analytics';
+import Settings from './sections/Settings';
+import InstallPrompt from './components/PWA/InstallPrompt';
+import { offlineStorage } from './services/offlineStorage';
 
-function AppContent() {
-  const [activeModule, setActiveModule] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+function App() {
+  const [activeSection, setActiveSection] = useState('dashboard');
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
-  // Register service worker for PWA
   useEffect(() => {
+    // Initialize offline storage
+    offlineStorage.init();
+
+    // PWA Installation detection
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setShowInstallPrompt(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Register service worker
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then((registration) => {
-            console.log('SW registered: ', registration);
-          })
-          .catch((registrationError) => {
-            console.log('SW registration failed: ', registrationError);
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('Service Worker registered successfully:', registration);
+          
+          // Check for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New version available
+                  if (confirm('A new version is available. Would you like to update?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            }
           });
-      });
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
     }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
-  const renderActiveModule = () => {
-    switch (activeModule) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'products':
-        return <ProductsManagement />;
-      case 'orders':
-        return <OrdersManagement />;
-      case 'customers':
-        return <CustomersManagement />;
-      case 'analytics':
-        return <Analytics />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
+  const getSectionTitle = () => {
+    switch (activeSection) {
+      case 'dashboard': return 'Dashboard Overview';
+      case 'products': return 'Product Management';
+      case 'orders': return 'Order Management';
+      case 'customers': return 'Customer Management';
+      case 'analytics': return 'Advanced Analytics';
+      case 'settings': return 'System Settings';
+      default: return 'Dashboard Overview';
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'dashboard': return <Dashboard />;
+      case 'products': return <Products />;
+      case 'orders': return <Orders />;
+      case 'customers': return <Customers />;
+      case 'analytics': return <Analytics />;
+      case 'settings': return <Settings />;
+      default: return <Dashboard />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        <Sidebar
-          activeModule={activeModule}
-          setActiveModule={setActiveModule}
-          isOpen={sidebarOpen}
-          setIsOpen={setSidebarOpen}
-        />
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar 
+        activeSection={activeSection} 
+        onSectionChange={setActiveSection} 
+      />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header title={getSectionTitle()} />
         
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header setSidebarOpen={setSidebarOpen} />
-          
-          <main className="flex-1 overflow-x-hidden overflow-y-auto">
-            <div className="container mx-auto px-6 py-8">
-              {renderActiveModule()}
-            </div>
-          </main>
-        </div>
+        <main className="flex-1 overflow-y-auto">
+          {renderContent()}
+        </main>
       </div>
-    </div>
-  );
-}
 
-function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+      {/* PWA Install Prompt */}
+      {showInstallPrompt && (
+        <InstallPrompt
+          onInstall={() => setShowInstallPrompt(false)}
+          onDismiss={() => setShowInstallPrompt(false)}
+        />
+      )}
+    </div>
   );
 }
 
